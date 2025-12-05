@@ -1,5 +1,22 @@
 services:
 
+  order-service:
+    build:
+      context: ./demo
+      dockerfile: Dockerfile
+    environment:
+      OTEL_SERVICE_NAME: "order-service"
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=order-service,env=dev"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4318"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_LOGS_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "otlp"
+      OTEL_TRACES_EXPORTER: "otlp"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - collector
+
   collector:
     container_name: collector
     image: otel/opentelemetry-collector-contrib:0.91.0
@@ -9,7 +26,8 @@ services:
       - ./docker/collector/otel-config.yml:/etc/otelcol-contrib/otel-config.yml
     restart: always
     ports:
-      - "4317" # OTLP gRPC receiver
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP http/protobuf receiver
       - "8889" # Prometheus exporter metrics
     depends_on:
       - loki
@@ -47,9 +65,7 @@ services:
       timeout: 1s
       retries: 10
     ports:
-      - "3200:3200"   # tempo
-      - "4318:4318"   # otlp http
-      - "4317:4317"   # otlp grpc
+      - "3200:3200"
     volumes:
       - ./docker/tempo/tempo.yml:/etc/tempo.yml:ro
 
